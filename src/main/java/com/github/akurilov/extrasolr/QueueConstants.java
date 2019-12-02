@@ -2,8 +2,10 @@ package com.github.akurilov.extrasolr;
 
 public interface QueueConstants {
 
-    String HOST = "localhost";
-    int PORT = 5555;
-    String URL = "url";
-    String CONTENT = "content";
+    String QUEUE_URI_SCHEMA = "nats://";
+    String[] QUEUE_HOSTS = new String[] {
+        "localhost:4222",
+    };
+    String QUEUE_URL = "url";
+    String QUEUE_CONTENT = "content";
 }

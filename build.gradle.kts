@@ -8,7 +8,7 @@ repositories {
 
 dependencies {
     implementation("com.squareup.okhttp3:okhttp:4.2.2")
-    implementation("org.zeromq:jeromq:0.5.1")
+    implementation("io.nats:jnats:2.6.6")
     implementation("org.apache.solr:solr-solrj:8.3.0")
     testImplementation("org.junit.jupiter:junit-jupiter:5.5.1")
 }
