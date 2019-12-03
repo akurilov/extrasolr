@@ -18,13 +18,14 @@ dependencies {
     compile("com.squareup.okhttp3:okhttp:${okHttpVersion}")
     compile("io.nats:jnats:${natsVersion}")
     compile("org.apache.solr:solr-solrj:${solrVersion}")
+    compile("net.htmlparser.jericho:jericho-html:3.4")
     compile("org.slf4j:slf4j-simple:1.7.24")
     testCompile("org.junit.jupiter:junit-jupiter:5.5.1")
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_13
-    targetCompatibility = JavaVersion.VERSION_13
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
 }
 
 tasks {
@@ -45,9 +46,8 @@ tasks {
 }
 
 import com.bmuschko.gradle.docker.tasks.image.*
-import com.bmuschko.gradle.docker.tasks.container.*
 
-task dockerBuildImage(type: DockerBuildImage) {
+task dockerBuildImage(type: DockerBuildImage, dependsOn: jar) {
     inputDir = project.projectDir
     buildArgs = [
         "NATS_VERSION": natsVersion,
@@ -55,8 +55,10 @@ task dockerBuildImage(type: DockerBuildImage) {
     ]
     dockerFile = project.file("ci${File.separator}docker${File.separator}Dockerfile")
     imageId = "akurilov/${project.name}".toString()
-    tags = [
-        "akurilov/${project.name}:${version}",
-        "akurilov/${project.name}:testing",
-    ]
+}
+
+task dockerTagImage(type: DockerTagImage, dependsOn: dockerBuildImage) {
+    imageId = dockerBuildImage.imageId
+    tag = "latest"
+    repository = "akurilov/${project.name}"
 }
