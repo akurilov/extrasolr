@@ -19,6 +19,7 @@ dependencies {
     compile("io.nats:jnats:${natsVersion}")
     compile("org.apache.solr:solr-solrj:${solrVersion}")
     compile("net.htmlparser.jericho:jericho-html:3.4")
+    compile("org.apache.commons:commons-collections4:4.4")
     compile("org.slf4j:slf4j-simple:1.7.24")
     testCompile("org.junit.jupiter:junit-jupiter:5.5.1")
 }

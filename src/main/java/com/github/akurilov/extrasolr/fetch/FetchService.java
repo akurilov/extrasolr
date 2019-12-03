@@ -7,8 +7,11 @@ import okhttp3.Request;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.concurrent.atomic.LongAdder;
+
 import static com.github.akurilov.extrasolr.Config.QUEUE_HOSTS;
 import static com.github.akurilov.extrasolr.Config.SUBJECT_FETCH;
+import static com.github.akurilov.extrasolr.Metrics.outputMetricsLoop;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class FetchService {
@@ -22,9 +25,14 @@ public final class FetchService {
             .connectionPool(httpClientConnPool)
             .build();
         LOG.info("HTTP client initialized");
+        final var succCounter = new LongAdder();
+        final var failCounter = new LongAdder();
         try(final var mq = new NatsMessageQueue(QUEUE_HOSTS)) {
-            final var respCallback = new HttpResponseCallback(mq);
-            mq.subscribe(SUBJECT_FETCH, (none, payload) -> onUri(httpClient, respCallback, payload));
+            final var respCallback = new HttpResponseCallback(mq, succCounter, failCounter);
+            mq.subscribe(
+                SUBJECT_FETCH, (none, payload) -> onUri(httpClient, respCallback, payload)
+            );
+            outputMetricsLoop(LOG, 10, succCounter, failCounter);
         }
     }
 

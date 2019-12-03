@@ -1,44 +1,35 @@
 package com.github.akurilov.extrasolr.index;
 
 import com.github.akurilov.extrasolr.mq.nats.NatsMessageQueue;
-import com.github.akurilov.extrasolr.parse.ParseService;
-import org.apache.solr.client.solrj.SolrClient;
 import org.apache.solr.client.solrj.impl.ConcurrentUpdateSolrClient;
-import org.apache.solr.common.SolrInputDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import java.util.concurrent.atomic.LongAdder;
 
 import static com.github.akurilov.extrasolr.Config.INDEX_HOST;
 import static com.github.akurilov.extrasolr.Config.QUEUE_HOSTS;
 import static com.github.akurilov.extrasolr.Config.SUBJECT_INDEX;
-import static java.nio.charset.StandardCharsets.UTF_8;
+import static com.github.akurilov.extrasolr.Metrics.outputMetricsLoop;
 
 public final class IndexService {
 
-    private static final Logger LOG = LoggerFactory.getLogger(ParseService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(IndexService.class);
 
     public static void main(final String... args)
     throws Exception {
-        final var indexClient = new ConcurrentUpdateSolrClient.Builder(INDEX_HOST)
-            .withThreadCount(Runtime.getRuntime().availableProcessors())
-            .build();
-        try(final var mq = new NatsMessageQueue(QUEUE_HOSTS)) {
-            mq.subscribe(SUBJECT_INDEX, (srcUrl, content) -> onContent(indexClient, srcUrl, content));
-
-            Thread.currentThread().join();
+        final var succCounter = new LongAdder();
+        final var failCounter = new LongAdder();
+        try(
+            final var indexClient = new ConcurrentUpdateSolrClient.Builder("http://" + INDEX_HOST + "/solr/extrasolr")
+                .withThreadCount(Runtime.getRuntime().availableProcessors())
+                .build()
+        ) {
+            final var msgHandler = new IndexMessageHandler(indexClient, succCounter, failCounter);
+            try(final var mq = new NatsMessageQueue(QUEUE_HOSTS)) {
+                mq.subscribe(SUBJECT_INDEX, msgHandler);
+                outputMetricsLoop(LOG, 10, succCounter, failCounter);
+            }
         }
-    }
-
-    static void onContent(final SolrClient indexClient, final String srcUrl, final byte[] content) {
-        final var txt = new String(content, UTF_8);
-        final var doc = new SolrInputDocument();
-        doc.addField("source", srcUrl);
-        doc.
-        System.out.println(
-            "================================================================================================================================\n" +
-            srcUrl + "\n" +
-            "--------------------------------------------------------------------------------------------------------------------------------\n" +
-            txt
-        );
     }
 }

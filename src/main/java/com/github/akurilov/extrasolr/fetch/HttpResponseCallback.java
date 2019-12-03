@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
+import java.util.concurrent.atomic.LongAdder;
 
 import static com.github.akurilov.extrasolr.Config.SUBJECT_PARSE;
 import static java.nio.charset.StandardCharsets.UTF_8;
@@ -19,10 +20,14 @@ implements Callback {
     private static final Logger LOG = LoggerFactory.getLogger(HttpResponseCallback.class);
 
     private final MessageQueue mq;
+    private final LongAdder succCounter;
+    private final LongAdder failCounter;
     private final int msgPayloadSizeLimit;
 
-    HttpResponseCallback(final MessageQueue mq) {
+    HttpResponseCallback(final MessageQueue mq, final LongAdder succCounter, final LongAdder failCounter) {
         this.mq = mq;
+        this.succCounter = succCounter;
+        this.failCounter = failCounter;
         this.msgPayloadSizeLimit = mq.payloadSizeLimit() > Integer.MAX_VALUE ?
             Integer.MAX_VALUE :
             (int) mq.payloadSizeLimit();
@@ -32,6 +37,7 @@ implements Callback {
     @Override
     public final void onFailure(@NotNull final Call call, @NotNull final IOException e) {
         LOG.debug(call.request().url() + ": request failure", e);
+        failCounter.increment();
     }
 
     @Override
@@ -41,6 +47,7 @@ implements Callback {
         try(final var body = response.body()) {
             if(null == body) {
                 LOG.warn("{}: no response body", reqUrl);
+                failCounter.increment();
             } else {
                 var contentLength = (int) body.contentLength();
                 contentLength = contentLength < 0 || contentLength > msgPayloadSizeLimit ?
@@ -48,10 +55,12 @@ implements Callback {
                     contentLength;
                 if(contentLength == 0) {
                     LOG.warn("{}: content length is {}", reqUrl, contentLength);
+                    failCounter.increment();
                 } else {
                     final var contentType = body.contentType();
                     if(null == contentType) {
                         LOG.warn("{}: failed to determine the content type", reqUrl);
+                        failCounter.increment();
                     } else {
                         final var contentTypePrefix = contentType.type();
                         if(contentTypePrefix.equals("text")) {
@@ -69,8 +78,10 @@ implements Callback {
                             }
                             final var text = new String(buff, 0, byteCount, charset);
                             mq.publish(SUBJECT_PARSE, reqUrl, text.getBytes(UTF_8));
+                            succCounter.increment();
                         } else {
                             LOG.debug("{}: unsupported content type \"{}\"", contentType, reqUrl);
+                            failCounter.increment();
                         }
                     }
                 }
