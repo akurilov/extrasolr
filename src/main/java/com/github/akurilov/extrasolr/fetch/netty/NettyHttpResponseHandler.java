@@ -19,16 +19,16 @@ import static com.github.akurilov.extrasolr.fetch.netty.Constants.ATTR_KEY_URI;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 @ChannelHandler.Sharable
-public final class HttpResponseHandler
+final class NettyHttpResponseHandler
 extends SimpleChannelInboundHandler<HttpObject> {
 
-    private static final Logger LOG = LoggerFactory.getLogger(HttpResponseHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(NettyHttpResponseHandler.class);
 
     private final MessageQueue mq;
     private final LongAdder succCounter;
     private final LongAdder failCounter;
 
-    public HttpResponseHandler(final MessageQueue mq, final LongAdder succCounter, final LongAdder failCounter) {
+    NettyHttpResponseHandler(final MessageQueue mq, final LongAdder succCounter, final LongAdder failCounter) {
         this.mq = mq;
         this.succCounter = succCounter;
         this.failCounter = failCounter;

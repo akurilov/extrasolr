@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 
 import static com.github.akurilov.extrasolr.fetch.TLS.TLS_PROTOCOLS;
 
-public final class HttpChannelInitializer
+final class NettyHttpChannelInitializer
 extends ChannelInitializer<Channel> {
 
     private final SimpleChannelInboundHandler<? extends HttpObject> respHandler;
@@ -29,7 +29,7 @@ extends ChannelInitializer<Channel> {
     private final boolean tlsFlag;
     private final SslContext tlsCtx;
 
-    public HttpChannelInitializer(
+    NettyHttpChannelInitializer(
         final SimpleChannelInboundHandler<? extends HttpObject> respHandler, final int contentLengthLimit,
         final boolean tlsFlag
     ) {
