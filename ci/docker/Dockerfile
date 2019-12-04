@@ -1,7 +1,6 @@
 FROM adoptopenjdk:13-jre-hotspot
 ARG NATS_VERSION=2.1.2
-ARG SOLR_VERSION=8.3.0
-EXPOSE 4222 8983
+ARG SOLR_VERSION=8.3.1
 RUN apt-get update && \
     apt-get install -y curl lsof unzip && \
     rm -rf /var/lib/apt/lists/* && \
@@ -15,4 +14,5 @@ RUN apt-get update && \
     rm -rf /tmp/*
 COPY build/libs/extrasolr.jar /opt/extrasolr/extrasolr.jar
 ADD ci/docker/entrypoint.sh /opt/extrasolr/entrypoint.sh
+EXPOSE 4222 8983 9010 9011 9012
 ENTRYPOINT /opt/extrasolr/entrypoint.sh

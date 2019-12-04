@@ -7,7 +7,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.concurrent.atomic.LongAdder;
 
-import static com.github.akurilov.extrasolr.Config.INDEX_HOST;
+import static com.github.akurilov.extrasolr.index.IndexConfig.INDEX_HOST;
 import static com.github.akurilov.extrasolr.Config.QUEUE_HOSTS;
 import static com.github.akurilov.extrasolr.Config.SUBJECT_INDEX;
 import static com.github.akurilov.extrasolr.Metrics.outputMetricsLoop;
