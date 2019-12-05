@@ -5,6 +5,8 @@ import com.github.akurilov.extrasolr.mq.MessageQueue;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.Channel;
 import io.netty.handler.codec.http.DefaultFullHttpRequest;
+import io.netty.handler.codec.http.HttpHeaderNames;
+import io.netty.handler.codec.http.HttpHeaderValues;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -12,10 +14,11 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.concurrent.atomic.LongAdder;
 
+import static com.github.akurilov.extrasolr.fetch.netty.Constants.ATTR_KEY_URI;
 import static io.netty.buffer.Unpooled.EMPTY_BUFFER;
 import static io.netty.channel.ChannelOption.TCP_NODELAY;
 import static io.netty.handler.codec.http.HttpMethod.GET;
-import static io.netty.handler.codec.http.HttpVersion.HTTP_1_0;
+import static io.netty.handler.codec.http.HttpVersion.HTTP_1_1;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 public final class NettyFetchUriMessageHandler
@@ -37,7 +40,7 @@ implements MessageHandler {
             .group(new io.netty.channel.epoll.EpollEventLoopGroup())
             .channel(io.netty.channel.epoll.EpollSocketChannel.class)
             .option(TCP_NODELAY, true)
-            .handler(new NettyHttpChannelInitializer(respHandler, payloadSizeLimit, false));
+            .handler(new NettyHttpChannelInitializer(respHandler, payloadSizeLimit, true));
         this.failCounter = failCounter;
     }
 
@@ -59,15 +62,18 @@ implements MessageHandler {
             final var connFuture = bootstrap.connect(uri.getHost(), port);
             connFuture.addListener((v) -> onUriConnection(connFuture.channel(), uri));
         } catch(final URISyntaxException e) {
-            LOG.warn("Failed to parse the uri \"" + uriRaw + "\"", e);
+            LOG.debug("Failed to parse the uri \"" + uriRaw + "\"", e);
             failCounter.increment();
         }
     }
 
     static void onUriConnection(final Channel conn, final URI uri) {
-        final var req = new DefaultFullHttpRequest(HTTP_1_0, GET, uri.getRawPath(), EMPTY_BUFFER);
+        conn.attr(ATTR_KEY_URI).set(uri);
+        final var req = new DefaultFullHttpRequest(HTTP_1_1, GET, uri.getRawPath(), EMPTY_BUFFER);
+        final var headers = req.headers();
+        headers.set(HttpHeaderNames.HOST, uri.getHost());
+        headers.set(HttpHeaderNames.CONNECTION, HttpHeaderValues.CLOSE);
+        headers.set(HttpHeaderNames.ACCEPT_ENCODING, HttpHeaderValues.GZIP);
         conn.writeAndFlush(req);
-        LOG.trace("Submitted the HTTP request to: {}", uri);
-        conn.close();
     }
 }

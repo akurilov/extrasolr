@@ -11,17 +11,19 @@ import org.slf4j.LoggerFactory;
 
 import java.util.Objects;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Function;
 import java.util.function.Predicate;
 
 import static com.github.akurilov.extrasolr.Config.SUBJECT_FETCH;
 import static com.github.akurilov.extrasolr.Config.SUBJECT_INDEX;
+import static com.github.akurilov.extrasolr.parse.UriUtil.toAbsoluteUri;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 final class ParseMessageHandler
 implements MessageHandler {
 
+    public static final int UNIQUE_URI_CACHE_LIMIT = 1_000_000;
     private static final Logger LOG = LoggerFactory.getLogger(ParseMessageHandler.class);
-    private static final int UNIQUE_URLS_CACHE_LIMIT = 1_000_000;
 
     private final MessageQueue mq;
     private final LongAdder succCounter;
@@ -32,30 +34,32 @@ implements MessageHandler {
         this.mq = mq;
         this.succCounter = succCounter;
         this.failCounter = failCounter;
-        this.urlFilter = new FixedCacheUniquenessFilter<>(UNIQUE_URLS_CACHE_LIMIT);
+        this.urlFilter = new FixedCacheUniquenessFilter<>(UNIQUE_URI_CACHE_LIMIT);
     }
 
     @Override
-    public final void accept(final String srcUrl, final byte[] content) {
+    public final void accept(final String srcUri, final byte[] content) {
         final var contentTxt = new String(content, UTF_8);
+        final var linkToUri = (Function<String, String>) (link) -> toAbsoluteUri(srcUri, link);
         try {
             final var htmlSrc = new Source(contentTxt);
             htmlSrc.fullSequentialParse();
-            extractLinks(htmlSrc);
-            extractText(srcUrl, htmlSrc);
+            extractLinks(htmlSrc, linkToUri);
+            extractText(srcUri, htmlSrc);
             succCounter.increment();
         } catch(final Exception e) {
-            LOG.warn(srcUrl + ": failed to parse the content", e);
+            LOG.warn(srcUri + ": failed to parse the content", e);
             failCounter.increment();
         }
     }
 
-    void extractLinks(final Segment htmlSrc) {
+    void extractLinks(final Segment htmlSrc, final Function<String, String> linkToUri) {
         htmlSrc
             .getAllElements(HTMLElementName.A)
             .parallelStream()
             .map(ParseMessageHandler::hrefAttributeValue)
             .filter(Objects::nonNull)
+            .map(linkToUri)
             .filter(urlFilter)
             .forEach(this::handleLinkUrl);
     }
