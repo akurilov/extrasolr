@@ -1,6 +1,5 @@
 package com.github.akurilov.extrasolr.fetch;
 
-import com.github.akurilov.extrasolr.fetch.netty.NettyFetchUriMessageHandler;
 import com.github.akurilov.extrasolr.mq.nats.NatsMessageQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,8 +19,8 @@ public final class FetchService {
         final var succCounter = new LongAdder();
         final var failCounter = new LongAdder();
         try(final var mq = new NatsMessageQueue(QUEUE_HOSTS)) {
-            final var fetchClient = new NettyFetchUriMessageHandler(mq, succCounter, failCounter);
-            mq.subscribe(SUBJECT_FETCH, fetchClient);
+            final var msgHandler = new FetchUriMessageHandler(mq, succCounter, failCounter);
+            mq.subscribe(SUBJECT_FETCH, msgHandler);
             outputMetricsLoop(LOG, 10, succCounter, failCounter);
         }
     }
